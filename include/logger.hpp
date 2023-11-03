@@ -51,13 +51,25 @@ const std::string XML_OPEN  = DIR_LOGS + "open_ports.xml";
 const std::string DIR_PORTS = DIR_LOGS + "Ports_Scan/";
 /* Return Codes */
 enum ReturnCodes {
+    CMD_EXEC_FAIL = -4,
+    DIR_CREATE_FAIL = -3,
+    TARGET_ADDR_FAIL = -2,
     ARG_NUM_FAIL = -1,
-    ARG_NUM_PASS = 1
+    ARG_NUM_PASS = 1,
+    TARGET_ADDR_PASS = 2,
+    DIR_CREATE_PASS = 3,
+    CMD_EXEC_PASS = 4
 };
 /* Return Messages */
 static std::map <ReturnCodes, std::string> ReturnMessages = {
+        {CMD_EXEC_FAIL, "Executing system command has failed."},
+        {DIR_CREATE_FAIL, "Creating directories has failed. Check \n" + LOG_RAW + "for error details."},
+        {TARGET_ADDR_FAIL, "Target is invalid. Check input and try again."},
         {ARG_NUM_FAIL, "Argument(s) mismatch. Check input and try again."},
-        {ARG_NUM_PASS, "Argument(s) counts has been validated."}
+        {ARG_NUM_PASS, "Argument(s) counts has been validated."},
+        {TARGET_ADDR_PASS, "Target address is validated."},
+        {DIR_CREATE_PASS, "Directories have been created."},
+        {CMD_EXEC_PASS, "System command has been executed."}
 };
 /* Logger class */
 class Logger {

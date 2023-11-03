@@ -10,4 +10,7 @@ add_executable(PortHawk
         include/logger.hpp
         source/logger.cpp
         source/porthawk.cpp
+        include/utilities.hpp
+        source/main.cpp
+        source/utilities.cpp
 )
