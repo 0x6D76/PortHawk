@@ -13,4 +13,9 @@ add_executable(PortHawk
         include/utilities.hpp
         source/main.cpp
         source/utilities.cpp
+        include/scanner.hpp
+        include/pugiconfig.hpp
+        include/pugixml.hpp
+        source/pugixml.cpp
+        source/scanner.cpp
 )

@@ -43,6 +43,9 @@ const std::string MAG = "\x1B[35m";
 const std::string CYN = "\x1B[36m";
 /* Modules Names */
 const std::string MOD_INIT      = "Initialization";
+const std::string MOD_OPEN      = "Open Ports scanning";
+const std::string MOD_XML_OPEN  = "XML Open Ports scanning";
+const std::string MOD_PORTS_SUM = "Ports Summary";
 /* Directories & Logs */
 const std::string DIR_CWD   = std::filesystem::absolute("");
 const std::string DIR_LOGS  = DIR_CWD + "Logs/";
@@ -51,6 +54,11 @@ const std::string XML_OPEN  = DIR_LOGS + "open_ports.xml";
 const std::string DIR_PORTS = DIR_LOGS + "Ports_Scan/";
 /* Return Codes */
 enum ReturnCodes {
+    OPEN_FOUND_FAIL = -9,
+    FILTER_FOUND_FAIL = -8,
+    PORTS_FOUND_FAIL = -7,
+    XML_OPEN_FAIL = -6,
+    NMAP_OPEN_FAIL = -5,
     CMD_EXEC_FAIL = -4,
     DIR_CREATE_FAIL = -3,
     TARGET_ADDR_FAIL = -2,
@@ -58,18 +66,33 @@ enum ReturnCodes {
     ARG_NUM_PASS = 1,
     TARGET_ADDR_PASS = 2,
     DIR_CREATE_PASS = 3,
-    CMD_EXEC_PASS = 4
+    CMD_EXEC_PASS = 4,
+    NMAP_OPEN_PASS = 5,
+    XML_OPEN_PASS = 6,
+    PORTS_FOUND_PASS = 7,
+    FILTER_FOUND_PASS = 8,
+    OPEN_FOUND_PASS = 9,
 };
 /* Return Messages */
 static std::map <ReturnCodes, std::string> ReturnMessages = {
+        {OPEN_FOUND_FAIL, "No open port found on the target. Check raw log for more details. Exiting tool."},
+        {FILTER_FOUND_FAIL, "No filtered port found on the target."},
+        {PORTS_FOUND_FAIL, "No usable ports found on the target. Check scan results on raw log for more details."},
+        {XML_OPEN_FAIL, "Parsing open ports xml file has failed."},
+        {NMAP_OPEN_FAIL, "Executing NMAP open ports scan has failed. Check raw log for more details"},
         {CMD_EXEC_FAIL, "Executing system command has failed."},
-        {DIR_CREATE_FAIL, "Creating directories has failed. Check \n" + LOG_RAW + "for error details."},
+        {DIR_CREATE_FAIL, "Creating directories has failed. Check raw log for error details."},
         {TARGET_ADDR_FAIL, "Target is invalid. Check input and try again."},
         {ARG_NUM_FAIL, "Argument(s) mismatch. Check input and try again."},
         {ARG_NUM_PASS, "Argument(s) counts has been validated."},
         {TARGET_ADDR_PASS, "Target address is validated."},
         {DIR_CREATE_PASS, "Directories have been created."},
-        {CMD_EXEC_PASS, "System command has been executed."}
+        {CMD_EXEC_PASS, "System command has been executed."},
+        {NMAP_OPEN_PASS, "NMAP Open ports scan has been completed."},
+        {XML_OPEN_PASS, "Parsing open ports xml has been completed."},
+        {PORTS_FOUND_PASS, "Identified usable ports on the target."},
+        {FILTER_FOUND_PASS, "Identified filtered port(s) on the target."},
+        {OPEN_FOUND_PASS, "Identified open port(s) on the target."},
 };
 /* Logger class */
 class Logger {

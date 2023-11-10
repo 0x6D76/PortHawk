@@ -10,6 +10,7 @@
  */
 
 #include "logger.hpp"
+#include "scanner.hpp"
 #include "utilities.hpp"
 
 int PortHawk (int argCount, char **values) {
@@ -17,7 +18,9 @@ int PortHawk (int argCount, char **values) {
     std::string address;
     int retCode = InitializeTool (argCount, values, address);
     Logger (PASS, MOD_INIT, retCode, LOG_RAW, true).LogMessage ();
-
+    PortHawkScanner target (address);
+    target.GetOpenPorts ();
+    target.SummaryOpenPorts ();
     Logger (FOOT).PrintToolLabel ();
     return 0;
 } /* End of PortHawk () */
