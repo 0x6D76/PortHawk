@@ -42,10 +42,12 @@ const std::string BLU = "\x1B[34m";
 const std::string MAG = "\x1B[35m";
 const std::string CYN = "\x1B[36m";
 /* Modules Names */
-const std::string MOD_INIT      = "Initialization";
-const std::string MOD_OPEN      = "Open Ports scanning";
-const std::string MOD_XML_OPEN  = "XML Open Ports scanning";
-const std::string MOD_PORTS_SUM = "Ports Summary";
+const std::string MOD_INIT          = "Initialization";
+const std::string MOD_OPEN          = "Open Ports scanning";
+const std::string MOD_XML_OPEN      = "XML Open Ports scanning";
+const std::string MOD_PORTS_SUM     = "Ports Summary";
+const std::string MOD_MULTI_SCAN    = "Multi-threaded deep services probe";
+const std::string MOD_DEEP_SRV_SCAN = "Deep Service Probe";
 /* Directories & Logs */
 const std::string DIR_CWD   = std::filesystem::absolute("");
 const std::string DIR_LOGS  = DIR_CWD + "Logs/";
@@ -72,6 +74,7 @@ enum ReturnCodes {
     PORTS_FOUND_PASS = 7,
     FILTER_FOUND_PASS = 8,
     OPEN_FOUND_PASS = 9,
+    MULTI_THREAD_PROBE_INFO = 10,
 };
 /* Return Messages */
 static std::map <ReturnCodes, std::string> ReturnMessages = {
@@ -93,6 +96,7 @@ static std::map <ReturnCodes, std::string> ReturnMessages = {
         {PORTS_FOUND_PASS, "Identified usable ports on the target."},
         {FILTER_FOUND_PASS, "Identified filtered port(s) on the target."},
         {OPEN_FOUND_PASS, "Identified open port(s) on the target."},
+        {MULTI_THREAD_PROBE_INFO, "Initiated multi-threaded service probe on all open port(s)."},
 };
 /* Logger class */
 class Logger {

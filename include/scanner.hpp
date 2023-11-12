@@ -10,14 +10,17 @@
 
 #ifndef PORTHAWK_SCANNER_HPP
 #define PORTHAWK_SCANNER_HPP
+#include <thread>
 #include <vector>
 #include "logger.hpp"
 #include "pugixml.hpp"
 #include "utilities.hpp"
 /* Constants Declarations */
+const int MAX_THREADS               = 20;
 const std::string STATE_OPEN        = "open";
 const std::string STATE_FILTERED    = "filtered";
 const std::string BASE_NMAP_OPEN    = "nmap -Pn -T4 --min-rate=2000 -p- -oX " + XML_OPEN;
+const std::string XML_SRV_CONFIG    = DIR_CWD + "services.xml";
 /* Port class*/
 class Port {
 public:
@@ -39,9 +42,11 @@ private:
     std::vector <std::string> portsOpen;
     std::vector <std::string> portsFilter;
     std::map <std::string, std::unique_ptr <Port>> mapPort;
+    std::mutex mutexXmlAccess;
 public:
     explicit PortHawkScanner (const std::string &target);
     int GetOpenPorts ();
     void SummaryOpenPorts ();
+    int MultiThreadedServicesProbe (int maxThreads = MAX_THREADS);
 };
 #endif /* PORTHAWK_SCANNER_HPP */

@@ -9,6 +9,7 @@
  *           PortHawkScanner
  *              PortHawkScanner ()
  *              GetOpenPorts ()
+ *              SummaryOpenPorts ()
  * Author: 0x6D76
  * Copyright (c) 2023 0x6D76 (0x6D76@proton.me)
  ***********************************************************************************************************************
@@ -136,3 +137,29 @@ void PortHawkScanner::SummaryOpenPorts () {
         Logger (INFO, module, OPEN_FOUND_FAIL, LOG_RAW, true).ExitExecution ();
     }
 } /* End of SummaryOpenPorts () */
+
+
+/*
+ *
+ * :arg: maxThreads, integer value denoting maximum number of threads to use, default value- 20
+ * :return: integer value denoting the success or failure of the operation.
+ */
+int PortHawkScanner::MultiThreadedServicesProbe (int maxThreads) {
+
+    std::string module = MOD_MULTI_SCAN;
+    std::vector <std::thread> threads;
+    Logger (INFO, module, MULTI_THREAD_PROBE_INFO, LOG_RAW, true).LogMessage ();
+
+    threads.reserve(portsOpen.size());
+    for (const std::string &portKey : portsOpen) {
+        threads.emplace_back ([&, portKey] () {
+            mutexXmlAccess.lock ();
+            std::unique_ptr <Port> &port = mapPort [portKey];
+            if (port) { /* Call DeepServiceProbe */ std::cout << "DeepServiceProbe ()" << std::endl;}
+            mutexXmlAccess.unlock ();
+        });
+    }
+    /* Join all threads to wait for them to complete */
+    for (std::thread& thread : threads) { thread.join(); }
+    return 0; /* Change return code */
+} /* End of MultithreadedServicesProbe () */

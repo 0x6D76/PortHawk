@@ -21,6 +21,7 @@ int PortHawk (int argCount, char **values) {
     PortHawkScanner target (address);
     target.GetOpenPorts ();
     target.SummaryOpenPorts ();
+    target.MultiThreadedServicesProbe (20);
     Logger (FOOT).PrintToolLabel ();
     return 0;
 } /* End of PortHawk () */
