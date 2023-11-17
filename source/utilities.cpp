@@ -4,10 +4,12 @@
  * Description: This file contains definitions of commonly used functions to be used across the tool or otherwise
  * unclassifiable
  * Functions:
- *              int ValidateArguments ()
- *              int ConvertToIPAddress ()
- *              int InitializeTool ()
- *              int ExecuteSystemCommand ()
+ *              int ValidateArguments (int argCount, char **values, std::string &target)
+ *              int ConvertToIPAddress (const std::string &target, std::string &address)
+ *              int InitializeTool (int argCount, char **values, std::string &address)
+ *              int ExecuteSystemCommand (const std::string &command, std::stringstream &output)
+ *              std::string ReplacePlaceHolders (const std::string &command,
+                                                 const std::unordered_map<std::string, std::string> &placeHolders)
  * Author: 0x6D76
  * Copyright (c) 2023 0x6D76 (0x6D76@proton.me)
  ***********************************************************************************************************************
@@ -102,3 +104,27 @@ int ExecuteSystemCommand (const std::string &command, std::stringstream &output)
     pclose (pipe);
     return CMD_EXEC_PASS;
 } /* End of ExecuteSystemCommand () */
+
+
+/*
+ * This function gets a string and replaces the placeholders with the values supplied as an unordered_map.
+ * :arg: command, string on which the placeholders are to be replaced.
+ * :arg: placeHolders, unordered_map object containing the placeholder and string to replace it with.
+ * :return: string holding the replaced string.
+ */
+std::string ReplacePlaceHolders (const std::string &command,
+                                 const std::unordered_map<std::string, std::string> &placeHolders) {
+
+    std::string result = command;
+    /* Loop through placeholders map to replace */
+    for (const auto &placeHolder : placeHolders) {
+        std::string key = "$" + placeHolder.first;
+        size_t position = result.find (key);
+        /* Check and replace only if placeholder is present in the command */
+        while (position != std::string::npos) {
+            result.replace (position, key.length (), placeHolder.second);
+            position = result.find (key, position + placeHolder.second.length ());
+        }
+    }
+    return result;
+} /* End of ReplacePlaceHolders () */

@@ -1,15 +1,18 @@
 /*
  ***********************************************************************************************************************
  * File: scanner.cpp
- * Description: This file contains various member functions of different classes that are to be used as part of the
- * scanner module.
+ * Description: This file contains definitions of various member functions of different classes that are to be used as
+ * part of the scanner module.
  * Functions:
  *           Port
  *              Port ()
+ *              int DeepServiceProbe (const std::string &address)
+ *              int PortNmapScan (const std::string &address, const std::string &module)
  *           PortHawkScanner
  *              PortHawkScanner ()
- *              GetOpenPorts ()
- *              SummaryOpenPorts ()
+ *              int GetOpenPorts ()
+ *              void SummaryOpenPorts ()
+ *              int MultiThreadedServicesProbe (int maxThreads)
  * Author: 0x6D76
  * Copyright (c) 2023 0x6D76 (0x6D76@proton.me)
  ***********************************************************************************************************************
@@ -29,7 +32,90 @@ Port::Port (const std::string &id, const std::string &status, const std::string 
     service = name;
     product = "";
     std::filesystem::create_directories (DIR_PORTS + portid);
+    dirPort = DIR_PORTS + portid + "/";
+    xmlPortNmap = dirPort + "deep_probe_nmap.xml";
+    namePortLog = dirPort + "deep_probe_raw.log";
+    vulns = {};
+    scansCompleted = {};
+    scansFailed = {};
 } /* End of Port () */
+
+
+/*
+ * This function probes the identified open ports, by running NMAP scans to identify basic information and
+ * vulnerabilities about the running services. This furthers the probe by running all the scans mapped to individual
+ * services on "services.xml" file.
+ * :arg: address, const string holding the IP address of the target.
+ * :return: integer value denoting the success or failure of the operation.
+ */
+int Port::DeepServiceProbe (const std::string &address) {
+    std::string scan;
+    std::string module = MOD_DEEP_SRV_SCAN + "-" + portid + "/" + service;
+    Logger (INFO, module, DEEP_SRV_INFO, LOG_RAW).LogMessage ();
+    Logger (INFO, module, DEEP_SRV_INFO, namePortLog).LogMessage ();
+    scan = "NMAP Port Scan";
+    if (PortNmapScan (address, module) < 0) {
+        Logger (FAIL, module, DEEP_SRV_SCAN_FAIL, LOG_RAW, true).LogMessage ();
+        scansFailed.push_back (scan);
+        return DEEP_SRV_SCAN_FAIL;
+    }
+    Logger (PASS, module, DEEP_SRV_SCAN_PASS, LOG_RAW, true).LogMessage ();
+    return 0;
+}
+
+
+/*
+ * This function runs NMAP deeper scan against the target on the specified port and identifies its associated
+ * service, product, version & extrainfo.
+ * :arg: address, const string holding the target IP address.
+ * :arg: module, const string holding the name of the module.
+ * :return: integer value denoting the success or failure of the operation.
+ */
+int Port::PortNmapScan (const std::string &address, const std::string &module) {
+
+    /* Running NMAP deep scanning */
+    std::string command {};
+    std::stringstream output {};
+    std::unordered_map <std::string, std::string> placeHolders = {
+            {ID, portid},
+            {XML_FILE, xmlPortNmap},
+            {TARGET, address},
+    };
+    command = ReplacePlaceHolders (BASE_NMAP_PORT, placeHolders);
+    if (ExecuteSystemCommand (command, output) < 0) {
+        Logger (FAIL, module, NMAP_PORT_FAIL, namePortLog, false, output).LogMessage ();
+        return NMAP_PORT_FAIL;
+    }
+    Logger (PASS, module, NMAP_PORT_PASS, namePortLog, false, output).LogMessage ();
+    /* Parsing NMAP scan results */
+    pugi::xml_document document;
+    if (!document.load_file (xmlPortNmap.c_str())) {
+        Logger (FAIL, module, XML_PORT_FAIL, namePortLog, false, output).LogMessage ();
+        return XML_PORT_FAIL;
+    }
+    pugi::xml_node hostNode = document.child ("nmaprun").child ("host");
+    pugi::xml_node portNode = hostNode.child("ports").child("port");
+    /* Extracting service information */
+    pugi::xml_node serviceNode = portNode.child ("service");
+    service = serviceNode.attribute ("name").as_string ();
+    product = serviceNode.attribute ("product").as_string ();
+    version = serviceNode.attribute ("version").as_string ();
+    /* Extracting OS information */
+    pugi::xml_node osNode = hostNode.child ("os").child ("osmatch");
+    if (!osNode.empty ()) { osName = osNode.attribute ("name").value(); }
+    /* Extracting vulnerability information */
+    pugi::xml_node scriptNode;
+    for (scriptNode = portNode.child("script"); scriptNode; scriptNode = scriptNode.next_sibling ("script")) {
+        std::string scriptId = scriptNode.attribute("id").value();
+        std::string scriptOutput = scriptNode.child_value();
+        /* Check if vulnerability is marked as "vulnerable" */
+        if (scriptOutput.find("vulnerable") != std::string::npos) {
+            vulns.push_back (scriptId);
+        }
+    }
+    Logger (PASS, module, XML_PORT_PASS, namePortLog).LogMessage ();
+    return NMAP_PORT_PASS;
+} /* End of PortNmapScan () */
 
 
 /*
@@ -67,6 +153,7 @@ int PortHawkScanner::GetOpenPorts () {
     /* Parsing NMAP scan results */
     module = MOD_XML_OPEN;
     pugi::xml_document document;
+    /* Check and exit execution if loading XML file has failed */
     if (!document.load_file (XML_OPEN.c_str ())) {
         Logger (FAIL, module, XML_OPEN_FAIL, LOG_RAW, true, output).ExitExecution ();
     }
@@ -140,7 +227,8 @@ void PortHawkScanner::SummaryOpenPorts () {
 
 
 /*
- *
+ * This function gets open ports from the portsOpen data member and uses them to make multithreaded calls to the
+ * DeepServiceProbe member function Port object.
  * :arg: maxThreads, integer value denoting maximum number of threads to use, default value- 20
  * :return: integer value denoting the success or failure of the operation.
  */
@@ -150,16 +238,16 @@ int PortHawkScanner::MultiThreadedServicesProbe (int maxThreads) {
     std::vector <std::thread> threads;
     Logger (INFO, module, MULTI_THREAD_PROBE_INFO, LOG_RAW, true).LogMessage ();
 
-    threads.reserve(portsOpen.size());
+    threads.reserve (std::min (maxThreads, static_cast <int> (portsOpen.size())));
     for (const std::string &portKey : portsOpen) {
         threads.emplace_back ([&, portKey] () {
             mutexXmlAccess.lock ();
             std::unique_ptr <Port> &port = mapPort [portKey];
-            if (port) { /* Call DeepServiceProbe */ std::cout << "DeepServiceProbe ()" << std::endl;}
+            if (port) { port->DeepServiceProbe (address); }
             mutexXmlAccess.unlock ();
         });
     }
-    /* Join all threads to wait for them to complete */
+    /* Join all threads and wait for them to complete */
     for (std::thread& thread : threads) { thread.join(); }
-    return 0; /* Change return code */
+    return MULTI_THREAD_PROBE_PASS;
 } /* End of MultithreadedServicesProbe () */

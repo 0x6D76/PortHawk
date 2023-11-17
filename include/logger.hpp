@@ -48,6 +48,7 @@ const std::string MOD_XML_OPEN      = "XML Open Ports scanning";
 const std::string MOD_PORTS_SUM     = "Ports Summary";
 const std::string MOD_MULTI_SCAN    = "Multi-threaded deep services probe";
 const std::string MOD_DEEP_SRV_SCAN = "Deep Service Probe";
+const std::string MOD_DEEP_SCAN_FTP = "FTP- Deep Service Probe";
 /* Directories & Logs */
 const std::string DIR_CWD   = std::filesystem::absolute("");
 const std::string DIR_LOGS  = DIR_CWD + "Logs/";
@@ -56,6 +57,10 @@ const std::string XML_OPEN  = DIR_LOGS + "open_ports.xml";
 const std::string DIR_PORTS = DIR_LOGS + "Ports_Scan/";
 /* Return Codes */
 enum ReturnCodes {
+    DEEP_SRV_SCAN_FAIL = -15,
+    XML_PORT_FAIL = -14,
+    NMAP_PORT_FAIL = -13,
+    MULTI_THREAD_PROBE_FAIL = -11,
     OPEN_FOUND_FAIL = -9,
     FILTER_FOUND_FAIL = -8,
     PORTS_FOUND_FAIL = -7,
@@ -75,9 +80,19 @@ enum ReturnCodes {
     FILTER_FOUND_PASS = 8,
     OPEN_FOUND_PASS = 9,
     MULTI_THREAD_PROBE_INFO = 10,
+    MULTI_THREAD_PROBE_PASS = 11,
+    DEEP_SRV_INFO = 12,
+    NMAP_PORT_PASS = 13,
+    XML_PORT_PASS = 14,
+    DEEP_SRV_SCAN_PASS = 15,
 };
+
 /* Return Messages */
 static std::map <ReturnCodes, std::string> ReturnMessages = {
+        {DEEP_SRV_SCAN_FAIL, "Deep service probe against the target port has failed. Check port log for more info."},
+        {XML_PORT_FAIL, "Parsing XML file from NMAP deeper scan has failed."},
+        {NMAP_PORT_FAIL, "NMAP deeper scan against target port has failed."},
+        {MULTI_THREAD_PROBE_FAIL, "Running multithreaded probe against open ports has failed."},
         {OPEN_FOUND_FAIL, "No open port found on the target. Check raw log for more details. Exiting tool."},
         {FILTER_FOUND_FAIL, "No filtered port found on the target."},
         {PORTS_FOUND_FAIL, "No usable ports found on the target. Check scan results on raw log for more details."},
@@ -97,7 +112,13 @@ static std::map <ReturnCodes, std::string> ReturnMessages = {
         {FILTER_FOUND_PASS, "Identified filtered port(s) on the target."},
         {OPEN_FOUND_PASS, "Identified open port(s) on the target."},
         {MULTI_THREAD_PROBE_INFO, "Initiated multi-threaded service probe on all open port(s)."},
+        {MULTI_THREAD_PROBE_PASS, "Running multithreaded probe against open ports has been completed."},
+        {DEEP_SRV_INFO, "Initiated deep service probe on the port."},
+        {NMAP_PORT_PASS, "NMAP deeper scan against target port has been completed."},
+        {XML_PORT_PASS, "Parsing XML file from NMAP deeper scan has been completed."},
+        {DEEP_SRV_SCAN_PASS, "Deep service probe against the target port has been completed."},
 };
+
 /* Logger class */
 class Logger {
 private:

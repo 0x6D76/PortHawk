@@ -20,7 +20,8 @@ const int MAX_THREADS               = 20;
 const std::string STATE_OPEN        = "open";
 const std::string STATE_FILTERED    = "filtered";
 const std::string BASE_NMAP_OPEN    = "nmap -Pn -T4 --min-rate=2000 -p- -oX " + XML_OPEN;
-const std::string XML_SRV_CONFIG    = DIR_CWD + "services.xml";
+const std::string BASE_NMAP_PORT    = "nmap -sT -sV -sC --script=vuln -p $id -oX $xmlFile $target";
+const std::string XML_SRV_CONFIG    = "/Users/murali/Downloads/Projects/PortHawk/assets/services.xml";
 /* Port class*/
 class Port {
 public:
@@ -29,9 +30,17 @@ public:
     std::string service;
     std::string product;
     std::string version;
+    std::string osName;
+    std::string dirPort;
+    std::string xmlPortNmap;
+    std::string namePortLog;
     std::vector <std::string> vulns;
+    std::vector <std::string> scansCompleted;
+    std::vector <std::string> scansFailed;
     /* Member functions */
     Port (const std::string &id, const std::string &status, const std::string &name = "N/A");
+    int DeepServiceProbe (const std::string &address);
+    int PortNmapScan (const std::string &address, const std::string &module);
 };
 /* PortHawkScanner class */
 class PortHawkScanner {

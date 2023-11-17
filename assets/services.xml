@@ -1,0 +1,34 @@
+<services>
+    <service>
+        <id>21</id>
+        <name>ftp</name>
+        <tools>
+            <tool>
+                <name>nmap</name>
+                <function>NmapFTP</function>
+                <command>nmap -sT -sV -sC --script=vuln -p $id -oX $xmlFile $target</command>
+            </tool>
+        </tools>
+    </service>
+    <service>
+        <id>80</id>
+        <name>http</name>
+        <tools>
+            <tool>
+                <name>nmap</name>
+                <function>NmapHTTP</function>
+                <command>nmap -sT -sV -sC --script=vuln -p $id -oX $xmlFile $target</command>
+            </tool>
+            <tool>
+                <name>nikto</name>
+                <function>NiktoHTTP</function>
+                <command>nikto http://$target:$port</command>
+            </tool>
+            <tool>
+                <name>curl</name>
+                <function>CurlHTTP</function>
+                <command>curl -x http://$target:$port</command>
+            </tool>
+        </tools>
+    </service>
+</services>
