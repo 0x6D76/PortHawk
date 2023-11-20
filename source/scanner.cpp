@@ -31,7 +31,7 @@ Port::Port (const std::string &id, const std::string &status, const std::string 
     state = status;
     service = name;
     product = "";
-    std::filesystem::create_directories (DIR_PORTS + portid);
+    if (state == STATE_OPEN) { std::filesystem::create_directories (DIR_PORTS + portid); }
     dirPort = DIR_PORTS + portid + "/";
     xmlPortNmap = dirPort + "deep_probe_nmap.xml";
     namePortLog = dirPort + "deep_probe_raw.log";
@@ -61,7 +61,7 @@ int Port::DeepServiceProbe (const std::string &address) {
     }
     Logger (PASS, module, DEEP_SRV_SCAN_PASS, LOG_RAW, true).LogMessage ();
     return 0;
-}
+} /* End of DeepServiceProbe () */
 
 
 /*
@@ -89,12 +89,12 @@ int Port::PortNmapScan (const std::string &address, const std::string &module) {
     Logger (PASS, module, NMAP_PORT_PASS, namePortLog, false, output).LogMessage ();
     /* Parsing NMAP scan results */
     pugi::xml_document document;
-    if (!document.load_file (xmlPortNmap.c_str())) {
+    if (!document.load_file (xmlPortNmap.c_str ())) {
         Logger (FAIL, module, XML_PORT_FAIL, namePortLog, false, output).LogMessage ();
         return XML_PORT_FAIL;
     }
     pugi::xml_node hostNode = document.child ("nmaprun").child ("host");
-    pugi::xml_node portNode = hostNode.child("ports").child("port");
+    pugi::xml_node portNode = hostNode.child ("ports").child ("port");
     /* Extracting service information */
     pugi::xml_node serviceNode = portNode.child ("service");
     service = serviceNode.attribute ("name").as_string ();
@@ -102,14 +102,14 @@ int Port::PortNmapScan (const std::string &address, const std::string &module) {
     version = serviceNode.attribute ("version").as_string ();
     /* Extracting OS information */
     pugi::xml_node osNode = hostNode.child ("os").child ("osmatch");
-    if (!osNode.empty ()) { osName = osNode.attribute ("name").value(); }
+    if (!osNode.empty ()) { osName = osNode.attribute ("name").value (); }
     /* Extracting vulnerability information */
     pugi::xml_node scriptNode;
-    for (scriptNode = portNode.child("script"); scriptNode; scriptNode = scriptNode.next_sibling ("script")) {
-        std::string scriptId = scriptNode.attribute("id").value();
-        std::string scriptOutput = scriptNode.child_value();
-        /* Check if vulnerability is marked as "vulnerable" */
-        if (scriptOutput.find("vulnerable") != std::string::npos) {
+    for (scriptNode = portNode.child ("script"); scriptNode; scriptNode = scriptNode.next_sibling ("script")) {
+        std::string scriptId = scriptNode.attribute ("id").value ();
+        std::string scriptOutput = scriptNode.child_value ();
+        /* Check if script result is marked "vulnerable" */
+        if (scriptOutput.find ("vulnerable") != std::string::npos) {
             vulns.push_back (scriptId);
         }
     }
@@ -146,7 +146,7 @@ int PortHawkScanner::GetOpenPorts () {
     std::stringstream output {};
     command << BASE_NMAP_OPEN << " " << address;
     /* Exit execution if running NMAP scan has failed */
-    if (ExecuteSystemCommand (command.str(), output) < 0) {
+    if (ExecuteSystemCommand (command.str (), output) < 0) {
         Logger (FAIL, module, NMAP_OPEN_FAIL, LOG_RAW, true, output).ExitExecution ();
     }
     Logger (PASS, module, NMAP_OPEN_PASS, LOG_RAW, true, output).LogMessage ();
@@ -238,13 +238,14 @@ int PortHawkScanner::MultiThreadedServicesProbe (int maxThreads) {
     std::vector <std::thread> threads;
     Logger (INFO, module, MULTI_THREAD_PROBE_INFO, LOG_RAW, true).LogMessage ();
 
-    threads.reserve (std::min (maxThreads, static_cast <int> (portsOpen.size())));
+    threads.reserve (std::min (maxThreads, static_cast <int> (portsOpen.size ())));
     for (const std::string &portKey : portsOpen) {
         threads.emplace_back ([&, portKey] () {
-            mutexXmlAccess.lock ();
+            //mutexXmlAccess.lock ();
             std::unique_ptr <Port> &port = mapPort [portKey];
+            /* Call DeepServiceProbe function */
             if (port) { port->DeepServiceProbe (address); }
-            mutexXmlAccess.unlock ();
+            //mutexXmlAccess.unlock ();
         });
     }
     /* Join all threads and wait for them to complete */
