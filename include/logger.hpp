@@ -1,7 +1,7 @@
 /*
  ***********************************************************************************************************************
  * File: logger.hpp
- * Description: This file contains declarations of constants, support functions, classes & member functions associated
+ * Description: This file contains declarations of constants, support functions, class & member functions associated
  *              with logging functionalities.
  * 
  * Author: 0x6D76
@@ -37,6 +37,12 @@ const std::string UNKNOWN = "Ran into an unkown error.";
 const std::string FOOTER = "Exiting the tool";
 const std::string LINE = "=============================================================================================="
                          "==========================";
+
+const std::string DIR_CWD = std::filesystem::absolute ("");
+const std::string DIR_BASE = DIR_CWD + "PH/";
+const std::string DIR_LOGS = DIR_BASE + "Logs/";
+const std::string LOG_RAW = DIR_LOGS + "PH_Master.log";
+const std::string BASE_NMAP_OPEN = "nmap -Pn -T4 --min-rate=2000 -p- -oX ";
 
 /* Function Declarations */
 const std::string GetReturnMessage (ReturnCodes code);

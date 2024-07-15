@@ -30,6 +30,7 @@ const std::string GetReturnMessage (ReturnCodes returnCode) {
 
     auto find = ReturnMessages.find (returnCode);
     return (find != ReturnMessages.end ()) ? find->second : UNKNOWN;
+
 } /* End of GetReturnMessage () */
 
 
@@ -43,31 +44,38 @@ const std::string GetCurrentTime () {
     char timeStamp [21];
     strftime (timeStamp, sizeof (timeStamp), "[%d-%m-%y %H:%M:%S]", localtime (&now));
     return (timeStamp);
+
 } /* End of GetCurrentTime () */
 
 
 /*
  * This function takes a vector of strings as its parameter, uses them as directory names and creates directories.
  * This function also checks whether the directory already exists and also handles error conditions.
+ * :arg: dirs, constant vector of strings holding the name(s) of directories to be created.
  */
 void InitializeDirectories (const std::vector <std::string>& dirs) {
 
     for (const auto &dir : dirs) {
         try {
             if (std::filesystem::exists (dir)) {
-                std::cout << "Dir " << dir << " already exists.\n";
+                // std::cout << "Dir " << dir << " already exists.\n";
             } else if (std::filesystem::create_directory (dir)) {
-                std::cout << "Dir " << dir << " created.\n";
+                // std::cout << "Dir " << dir << " created.\n";
             }
         } catch (const std::filesystem::filesystem_error &error) {
-            std::cout << "Dir " << dir << " creation failed. Error: " << error.what () << std::endl;
+            std::cout << "Dir " << dir << " creation failed. Error: " << error.what () 
+                      << "\nEnsure you have permission to create new directories the current path. " << std::endl;
+            exit (-1);
         }
     }
+
 } /* End of InitializeDirectories */
 
 
 /*
  * This is a constructor function for Logger class.
+ * :arg: nameFile, string holding the name of the log file.
+ * :arg: flag, bool value indicating whether to set the verbose flag.
  */
 Logger::Logger (std::string nameFile, bool flag) : fileName (nameFile), verbose (flag) {
     
@@ -98,6 +106,7 @@ void Logger::Header (const std::string identifier) {
     logFile.open (fileName, std::ios::app);
     logFile << flHeader.str ();
     logFile.close ();
+
 } /* End of Header () */
 
 
@@ -123,6 +132,11 @@ void Logger::Footer () {
  * This function initially formats the log message based on the arguments given. The formatted log message is then
  * printed to the STDOUT, if either verbose or user flag is set to true. Finally the log message, sans-color is 
  * written to the log file, the instance is initated with.
+ * :arg: severity, constant integer indicating the severity of the log message.
+ * :arg: module, const string holding the name of the current module.
+ * :arg: code, ReturnCodes object indicating the integer to fetch the message.
+ * :arg: uFlag, bool value indicating whether to print the log message to STDOUT.
+ * :arg: optional, stringstream object holding the optional message.
  */
 void Logger::Log (const int severity, const std::string module, const ReturnCodes code, bool uFlag, 
                   const std::stringstream& optional) {
@@ -151,15 +165,16 @@ void Logger::Log (const int severity, const std::string module, const ReturnCode
     }
 
     if (verbose || uFlag) {
-        strUser << color << strType << RST << GetCurrentTime () << "[" << module << "]" << message;
+        strUser << color << strType << RST << GetCurrentTime () << "[" << module << "] " << message;
         if (optional) { strUser << optional.str (); }
         std::cout << strUser.str () << std::endl;
     }
 
-    strFile << strType << GetCurrentTime () << "[" << module << "]" << message;
+    strFile << strType << GetCurrentTime () << "[" << module << "] " << message;
     if (optional) { strFile << optional.str (); }
     strFile << "\n";
     logFile.open (fileName, std::ios::app);
     logFile << strFile.str ();
     logFile.close ();
+
 } /* End of Log () */

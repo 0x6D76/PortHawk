@@ -28,12 +28,13 @@
  */
 void UsageExit (ReturnCodes code) {
 
-    std::cout << GetReturnMessage (code) << std::endl;
+    std::cout << RED << GetReturnMessage (code) << RST << std::endl;
     std::cout << "Usage: portHawk <target address>" << std::endl;
-    std::cout << "\tExample: 'portHawk target@domain.com' or 'portHawk 127.0.0.1'" << std::endl;
-    std::cout << FOOTER << std::endl;
+    std::cout << "Example: 'portHawk target@domain.com' or 'portHawk 127.0.0.1'" << std::endl;
     exit (-1);
-}
+
+} /* End of UsageExit () */
+
 
 /*
  * This function handles keyboard interrupt (Ctrl-C) signal sent by the user by printing the appropriate messages and 
@@ -47,6 +48,7 @@ void KeyboardInterrupt (int signal) {
         // keepRunning = 0;
         exit (-1);
     }
+
 } /* End of KeyboardInterrupt () */
 
 
@@ -82,12 +84,20 @@ ReturnCodes ExecuteSystemCommand (const std::string &command, std::stringstream 
  */
 ReturnCodes ValidateArguments (int argCount, char **values, std::string &address) {
 
+    std::vector <std::string> dirs;
+    
     if (argCount != 2) { 
-        
         UsageExit (ARG_COUNT_FAIL);
         return ARG_COUNT_FAIL; 
+    } else if (ConvertToIPAddress (values [1], address) == TARGET_ADDR_FAIL) {
+        UsageExit (TARGET_ADDR_FAIL);
+        return TARGET_ADDR_FAIL;
     }
-    return ConvertToIPAddress (values [1], address);
+    /* Creating required directories */
+    dirs.emplace_back (DIR_BASE);
+    dirs.emplace_back (DIR_LOGS);
+    InitializeDirectories (dirs);
+    return TARGET_ADDR_PASS;
 
 } /* End of ValidateArguments () */
 
