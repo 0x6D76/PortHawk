@@ -41,8 +41,8 @@ const std::string LINE = "======================================================
 const std::string DIR_CWD = std::filesystem::absolute ("");
 const std::string DIR_BASE = DIR_CWD + "PH/";
 const std::string DIR_LOGS = DIR_BASE + "Logs/";
+const std::string DIR_PORTS = DIR_BASE + "Ports/";
 const std::string LOG_RAW = DIR_LOGS + "PH_Master.log";
-const std::string BASE_NMAP_OPEN = "nmap -Pn -T4 --min-rate=2000 -p- -oX ";
 
 /* Function Declarations */
 const std::string GetReturnMessage (ReturnCodes code);
@@ -56,8 +56,8 @@ class Logger {
         bool verbose;
     public:
         Logger (std::string nameFile, bool verbose = false);
-        void Header (const std::string identifier = GetCurrentTime ());
-        void Footer ();
+        void Header (const std::string identifier = GetCurrentTime (), bool skip = true);
+        void Footer (bool skip = true);
         void Log (const int severity, const std::string module, const ReturnCodes code, bool uFlag = false, 
                   const std::stringstream& optional = std::stringstream ());
 };

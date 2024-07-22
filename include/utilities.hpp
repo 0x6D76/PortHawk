@@ -16,7 +16,9 @@
 #include <netdb.h>
 #include "logger.hpp"
 
-//volatile sig_atomic_t keepRunning = 1;
+const std::string ID        = "id";
+const std::string XML_FILE  = "xmlFile";
+const std::string TARGET    = "target";
 
 /* Function Declarations */
 void UsageExit (ReturnCodes code);
@@ -24,5 +26,7 @@ void KeyboardInterrupt (int signal);
 ReturnCodes ExecuteSystemCommand (const std::string &command, std::stringstream &output);
 ReturnCodes ValidateArguments (int argCount, char **values, std::string &address);
 ReturnCodes ConvertToIPAddress (const std::string &target, std::string &address);
+std::string ReplacePlaceHolders (const std::string &command, 
+                                 const std::unordered_map <std::string, std::string> &placeHolders);
 
 #endif

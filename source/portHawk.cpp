@@ -22,11 +22,12 @@ int main (int argCount, char **values) {
     std::string rawFile = LOG_RAW;
     Logger rawLog (rawFile);
     if (ValidateArguments (argCount, values, target) == TARGET_ADDR_PASS) {
-        rawLog.Header ();
+        rawLog.Header (target, false);
         class Host host (target);
         host.GetOpenPorts (rawLog);
         host.PrintOpenScanSummary (rawLog);
+        host.MultitreadedServiceProbe (rawLog);
     }
-    rawLog.Footer ();
+    rawLog.Footer (false);
     return 0;
-}
+} /* End of main () */

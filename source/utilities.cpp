@@ -96,6 +96,7 @@ ReturnCodes ValidateArguments (int argCount, char **values, std::string &address
     /* Creating required directories */
     dirs.emplace_back (DIR_BASE);
     dirs.emplace_back (DIR_LOGS);
+    dirs.emplace_back (DIR_PORTS);
     InitializeDirectories (dirs);
     return TARGET_ADDR_PASS;
 
@@ -127,3 +128,27 @@ ReturnCodes ConvertToIPAddress (const std::string &target, std::string &address)
     return TARGET_ADDR_PASS;
 
 } /* End of ConvertToIPAddress () */
+
+
+/*
+ * This function gets a string and replaces the placeholders with the values supplied as an unordered map.
+ * :arg: command, string on which the placeholders are to be replaced.
+ * :arg: placeHolders, unordered_map object containing the placeholders and the respective string values to replace
+ *       them with.
+ * :return: string holding the placeholder replaced string.
+ */
+std::string ReplacePlaceHolders (const std::string &command, 
+                                 const std::unordered_map <std::string, std::string> &placeHolders) {
+    
+    std::string result = command;
+    for (const auto &placeHolder : placeHolders) {
+        std::string key = "$" + placeHolder.first;
+        size_t position = result.find (key);
+
+        while (position != std::string::npos) {
+            result.replace (position, key.length (), placeHolder.second);
+            position = result.find (key, position + placeHolder.second.length ());
+        }
+    }
+    return result;
+} /* End of ReplacePlaceHolders () */

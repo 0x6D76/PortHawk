@@ -87,7 +87,7 @@ Logger::Logger (std::string nameFile, bool flag) : fileName (nameFile), verbose 
  * :arg: identifier, string holding the user-supplied identifier, to be printed onto log file. If identifier is
  *       not given, current time is used.
  */
-void Logger::Header (const std::string identifier) {
+void Logger::Header (const std::string identifier, bool skip) {
 
     int padding = 0;
     std::stringstream opHeader {};
@@ -102,7 +102,7 @@ void Logger::Header (const std::string identifier) {
              << LINE << std::endl;
 
     flHeader << LINE << "\n" << std::setw (padding + identifier.length ()) << identifier << "\n" << LINE << std::endl;
-    std::cout << opHeader.str ();
+    if (!skip) { std::cout << opHeader.str (); }
     logFile.open (fileName, std::ios::app);
     logFile << flHeader.str ();
     logFile.close ();
@@ -113,14 +113,14 @@ void Logger::Header (const std::string identifier) {
 /*
  * This function formats and prints footer to both STDOUT and log file
  */
-void Logger::Footer () {
+void Logger::Footer (bool skip) {
 
     int padding = 0;
     std::stringstream foot {};
     std::ofstream logFile;
     padding = (WIDTH - FOOTER.length ()) / 2;
     foot << LINE << "\n" << std::setw (padding + FOOTER.length ()) << FOOTER << "\n" << LINE << std::endl;
-    std::cout << foot.str ();
+    if (!skip) { std::cout << foot.str (); }
     logFile.open (fileName, std::ios::app);
     logFile << foot.str ();
     logFile.close ();

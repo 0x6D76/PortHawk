@@ -29,6 +29,71 @@ Port::Port (const std::string &id, const std::string &status, const std::string 
 
 
 /*
+ * This function runs deep NMAP script scan against the target on the specified port to identify its associated service,
+ * product, version and OS information.
+ * :arg: target, string holding the target IP address.
+ * :arg: masterLog, Logger object holding the master log to which the messages are to be logged.
+ * :return: ReturnCode object denoting the success or failure of the operation.
+ */
+int Port::DeepServiceProbe (const std::string &target, Logger masterLog) {
+
+    std::string command {};
+    std::string identifier {};
+    std::stringstream optional {};
+    std::stringstream output {};
+    pugi::xml_document document;
+    std::string xmlDeep = DIR_PORTS + portid + ".xml";
+    std::string logFile = DIR_LOGS + portid + ".log";
+    Logger portLog (logFile);
+
+    optional << "Port: " << portid;
+    std::unordered_map <std::string, std::string> placeHolders = {
+        {ID, portid},
+        {XML_FILE, xmlDeep},
+        {TARGET, target},
+    };
+    identifier = "Port: " + portid;
+    portLog.Header (identifier);
+    command = ReplacePlaceHolders (BASE_NMAP_DEEP, placeHolders);
+    masterLog.Log (INFO, MOD_DEEP_SCAN, DEEP_SERVICE_INFO, false, optional);
+    portLog.Log (INFO, MOD_DEEP_SCAN, DEEP_SERVICE_INFO, false, optional);
+    if (ExecuteSystemCommand (command, output) == CMD_EXEC_FAIL) {
+        portLog.Log (FAIL, MOD_DEEP_SCAN, DEEP_SERVICE_FAIL, false);
+        masterLog.Log (FAIL, MOD_DEEP_SCAN, DEEP_SERVICE_FAIL, true);
+    }
+    masterLog.Log (PASS,  MOD_DEEP_SCAN, DEEP_SERVICE_PASS, false, optional);
+    portLog.Log (PASS,  MOD_DEEP_SCAN, DEEP_SERVICE_PASS, true, optional);
+
+    if (!document.load_file (xmlDeep.c_str ())) {
+        portLog.Log (FAIL, MOD_DEEP_SCAN, DEEP_SERVICE_XML_FAIL, false);
+        masterLog.Log (FAIL, MOD_DEEP_SCAN, DEEP_SERVICE_XML_FAIL, true);
+        return DEEP_SERVICE_XML_FAIL;
+    }
+    pugi::xml_node nodeHost = document.child ("nmaprun").child ("host");
+    pugi::xml_node nodePort = nodeHost.child ("ports").child ("port");
+    pugi::xml_node nodeService = nodePort.child ("service");
+    /* Extracting service information */
+    service = nodeService.attribute ("name").as_string ();
+    product = nodeService.attribute ("product").as_string ();
+    version = nodeService.attribute ("version").as_string ();
+    /* Extracting OS information */
+    pugi::xml_node nodeOS = nodeHost.child ("os").child ("osmatch");
+    if (!nodeOS.empty ()) { osName = nodeOS.attribute ("name").value (); }
+    /* Extracting vulnerability information */
+    pugi::xml_node nodeScript;
+    for (nodeScript = nodePort.child ("script"); nodeScript; nodeScript = nodeScript.next_sibling ("scriipt")) {
+        std::string scriptID = nodeScript.attribute ("id").value ();
+        std::string scriptOP =  nodeScript.child_value ();
+        if (scriptOP.find ("vulnerable") != std::string::npos) {
+            vulnerabilities.push_back (scriptID);
+        }
+    }
+    return DEEP_SERVICE_XML_PASS;
+
+} /* End of DeepServiceProbe () */
+
+
+/*
  * Instantiates a new object of Host class.
  * :arg: addr, constant string holding the validated address of the target.
  */
@@ -64,13 +129,16 @@ void Host::AddPortToHost (const Port &port) {
  */
 ReturnCodes Host::GetOpenPorts (Logger objLog) {
 
-    std::stringstream command {};
+    std::string command {};
     std::stringstream output {};
     std::string xmlOpen = DIR_BASE + "OpenPorts.xml";
-
-    command << BASE_NMAP_OPEN << xmlOpen << " " << address;
+    std::unordered_map <std::string, std::string> placeHolders = {
+        {XML_FILE, xmlOpen},
+        {TARGET, address},
+    };
+    command = ReplacePlaceHolders (BASE_NMAP_OPEN, placeHolders);
     /* Execute NMAP scan and return failure if it fails */
-    if (ExecuteSystemCommand (command.str (), output) == CMD_EXEC_FAIL) {
+    if (ExecuteSystemCommand (command, output) == CMD_EXEC_FAIL) {
         objLog.Log (FAIL, MOD_NMAP_OPEN, OPEN_NMAP_FAIL, true);
         return OPEN_NMAP_FAIL;
     }
@@ -107,7 +175,9 @@ ReturnCodes Host::GetOpenPorts (Logger objLog) {
 
 
 /*
- *
+ * This function prints a summary of open and filtered ports identified on the target, along with their respective
+ * service names, if identified.
+ * :arg: logObj, Logger object to which the messages are to be logged.
  */
 void Host::PrintOpenScanSummary (Logger logObj) {
 
@@ -141,4 +211,37 @@ void Host::PrintOpenScanSummary (Logger logObj) {
     else {
         logObj.Log (INFO, MOD_SUM_PORTS, OPEN_FOUND_FAIL, true);
     }
-}
+} /* End of PrintOpenScanSummary () */
+
+
+/*
+ * This function creates necessary threads and make multi-threaded calls to DeepServiceProbe with the target address
+ * as its parameter.
+ * :arg: objFile, Logger object to which the messages are to be logged.
+ * :arg: maxThreads, integer denoting the number of threads, default value is MAX_THREADS (20).
+ * :return: ReturnCodes object denoting the success/failure of the operation.
+ */
+int Host::MultitreadedServiceProbe (Logger objFile, int maxThreads) {
+
+    /* module = MOD_MULTI_SCAN */
+    std::vector <std::thread> threads;
+    objFile.Log (INFO, MOD_MULTI_SCAN, MULTI_THREAD_PROBE_INFO, true);
+    threads.reserve (std::min (maxThreads, static_cast <int> (openPorts.size ())));
+    
+    for (Port &port : openPorts) {
+        threads.emplace_back ([&]() {
+            {
+                std::lock_guard <std::mutex> lock (mtx);
+                port.DeepServiceProbe (this->address, objFile);
+            }
+        });
+    }
+
+    for (std::thread &thread : threads) {
+        if (thread.joinable ()) {
+            thread.join ();
+        }
+    }
+    objFile.Log (PASS, MOD_MULTI_SCAN, MULTI_THREAD_PROBE_PASS, true);
+    return MULTI_THREAD_PROBE_PASS;
+} /* End of MultithreadedServiceProbe () */
