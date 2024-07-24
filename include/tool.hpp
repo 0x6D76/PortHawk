@@ -33,8 +33,9 @@ const std::string MOD_DEEP_SCAN = "Deep Service Probe";
 /* Return Codes */
 /* Use postive integers for PASS and INFO messages and negative integers for FAIL messages. */
 enum ReturnCodes {
+    DEEP_SERVICE_FAIL = -15,
     DEEP_SERVICE_XML_FAIL = -14,
-    DEEP_SERVICE_FAIL = -13,
+    DEEP_SERVICE_NMAP_FAIL = -13,
     ANTI_INFO_DEEP_SERVICE = -12,
     MULTI_THREAD_PROBE_FAIL = -11,
     ANTI_INFO_MULTI_THREAD = -10,
@@ -59,15 +60,17 @@ enum ReturnCodes {
     MULTI_THREAD_PROBE_INFO = 10,
     MULTI_THREAD_PROBE_PASS = 11,
     DEEP_SERVICE_INFO = 12,
-    DEEP_SERVICE_PASS = 13,
+    DEEP_SERVICE_NMAP_PASS = 13,
     DEEP_SERVICE_XML_PASS = 14,
+    DEEP_SERVICE_PASS = 15,
 };
 
 /* Return Messages */
 /* Make sure to leave a space after the message, to make adding optional messages presentable. */
 static std::map <ReturnCodes, std::string> ReturnMessages = {
+    {DEEP_SERVICE_FAIL, "Probing port for deeper information has failed. "},
     {DEEP_SERVICE_XML_FAIL, "Parsing the XML file to identify deep information has failed. " },
-    {DEEP_SERVICE_FAIL, "Executing NMAP deep probe on port has failed. "},
+    {DEEP_SERVICE_NMAP_FAIL, "Executing NMAP deep probe on port has failed. "},
     {MULTI_THREAD_PROBE_FAIL, "Running multithreaded probe against open ports has failed. "},
     {OPEN_FOUND_FAIL, "No open port identied on the target. "},
     {FILTER_FOUND_FAIL, "No filtered port identified on the target. "},
@@ -89,8 +92,9 @@ static std::map <ReturnCodes, std::string> ReturnMessages = {
     {MULTI_THREAD_PROBE_INFO, "Initiated multi-threaded service probe on all identified open port(s). "},
     {MULTI_THREAD_PROBE_PASS, "Running multithreaded probe against open ports has been completed. "},
     {DEEP_SERVICE_INFO, "Initiated deep service NMAP probe in the target. "},
-    {DEEP_SERVICE_PASS, "NMAP deep service probe on target has been completed. "},
+    {DEEP_SERVICE_NMAP_PASS, "NMAP deep service probe on target has been completed. "},
     {DEEP_SERVICE_XML_PASS, "Deep probe xml file has been parsed successfully. "},
+    {DEEP_SERVICE_PASS, "Porbing port for deeper information has been completed successfully. "},
 };
 
 #endif

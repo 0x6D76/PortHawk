@@ -38,10 +38,9 @@ Port::Port (const std::string &id, const std::string &status, const std::string 
 int Port::DeepServiceProbe (const std::string &target, Logger masterLog) {
 
     std::string command {};
-    std::string identifier {};
     std::stringstream optional {};
     std::stringstream output {};
-    pugi::xml_document document;
+    pugi::xml_document document {};
     std::string xmlDeep = DIR_PORTS + portid + ".xml";
     std::string logFile = DIR_LOGS + portid + ".log";
     Logger portLog (logFile);
@@ -52,43 +51,46 @@ int Port::DeepServiceProbe (const std::string &target, Logger masterLog) {
         {XML_FILE, xmlDeep},
         {TARGET, target},
     };
-    identifier = "Port: " + portid;
-    portLog.Header (identifier);
+    portLog.Header ();
+    portLog.Log (INFO, MOD_DEEP_SCAN, DEEP_SERVICE_INFO, false);
     command = ReplacePlaceHolders (BASE_NMAP_DEEP, placeHolders);
-    masterLog.Log (INFO, MOD_DEEP_SCAN, DEEP_SERVICE_INFO, false, optional);
-    portLog.Log (INFO, MOD_DEEP_SCAN, DEEP_SERVICE_INFO, false, optional);
+    /* Executing NMAP scan */
     if (ExecuteSystemCommand (command, output) == CMD_EXEC_FAIL) {
-        portLog.Log (FAIL, MOD_DEEP_SCAN, DEEP_SERVICE_FAIL, false);
-        masterLog.Log (FAIL, MOD_DEEP_SCAN, DEEP_SERVICE_FAIL, true);
+        portLog.Log (FAIL, MOD_DEEP_SCAN, DEEP_SERVICE_NMAP_FAIL, false);
+        masterLog.Log (FAIL, MOD_DEEP_SCAN, DEEP_SERVICE_NMAP_FAIL, true, optional);
+        return DEEP_SERVICE_FAIL;
     }
-    masterLog.Log (PASS,  MOD_DEEP_SCAN, DEEP_SERVICE_PASS, false, optional);
-    portLog.Log (PASS,  MOD_DEEP_SCAN, DEEP_SERVICE_PASS, true, optional);
-
+    portLog.Log (PASS, MOD_DEEP_SCAN, DEEP_SERVICE_NMAP_PASS, false);
+    /* Parsing the XML file */
     if (!document.load_file (xmlDeep.c_str ())) {
         portLog.Log (FAIL, MOD_DEEP_SCAN, DEEP_SERVICE_XML_FAIL, false);
-        masterLog.Log (FAIL, MOD_DEEP_SCAN, DEEP_SERVICE_XML_FAIL, true);
-        return DEEP_SERVICE_XML_FAIL;
+        masterLog.Log (FAIL, MOD_DEEP_SCAN, DEEP_SERVICE_XML_FAIL, true, optional);
+        return DEEP_SERVICE_FAIL;
     }
+    portLog.Log (PASS, MOD_DEEP_SCAN, DEEP_SERVICE_XML_PASS, false);
     pugi::xml_node nodeHost = document.child ("nmaprun").child ("host");
     pugi::xml_node nodePort = nodeHost.child ("ports").child ("port");
     pugi::xml_node nodeService = nodePort.child ("service");
     /* Extracting service information */
     service = nodeService.attribute ("name").as_string ();
-    product = nodeService.attribute ("product").as_string ();
+    product = nodeService.attribute ("product").as_string (); 
     version = nodeService.attribute ("version").as_string ();
     /* Extracting OS information */
     pugi::xml_node nodeOS = nodeHost.child ("os").child ("osmatch");
     if (!nodeOS.empty ()) { osName = nodeOS.attribute ("name").value (); }
     /* Extracting vulnerability information */
     pugi::xml_node nodeScript;
-    for (nodeScript = nodePort.child ("script"); nodeScript; nodeScript = nodeScript.next_sibling ("scriipt")) {
+    for (nodeScript = nodePort.child ("script"); nodeScript; nodeScript = nodeScript.next_sibling ("script")) {
         std::string scriptID = nodeScript.attribute ("id").value ();
-        std::string scriptOP =  nodeScript.child_value ();
-        if (scriptOP.find ("vulnerable") != std::string::npos) {
+        std::string scriptOP = nodeScript.child_value ();
+        if (scriptOP.find ("vulerable") != std::string::npos) {
             vulnerabilities.push_back (scriptID);
         }
     }
-    return DEEP_SERVICE_XML_PASS;
+    portLog.Log (PASS, MOD_DEEP_SCAN, DEEP_SERVICE_PASS, false);
+    masterLog.Log (PASS, MOD_DEEP_SCAN, DEEP_SERVICE_PASS, true, optional);
+
+    return DEEP_SERVICE_PASS;
 
 } /* End of DeepServiceProbe () */
 
