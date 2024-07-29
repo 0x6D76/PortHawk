@@ -26,7 +26,8 @@ int main (int argCount, char **values) {
         class Host host (target);
         host.GetOpenPorts (rawLog);
         host.PrintOpenScanSummary (rawLog);
-        host.MultitreadedServiceProbe (rawLog);
+        host.MultitreadedNMAPScript (rawLog);
+        host.PrintDeepScanSummary (rawLog);
     }
     rawLog.Footer (false);
     return 0;

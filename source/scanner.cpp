@@ -6,9 +6,13 @@
  * Functions:
  *           Port
  *              Port ()
+ *              DeepServiceProbe ()
  *           Host
  *              Host ()
  *              AddPortToHost ()
+ *              GetOpenPorts ()
+ *              PrintOpenScanSummary ()
+ *              MultitreadedNMAPScript ()
  * Author: 0x6D76
  * Copyright (c) 2024 0x6D76 (0x6D76@proton.me)
  ***********************************************************************************************************************
@@ -35,7 +39,7 @@ Port::Port (const std::string &id, const std::string &status, const std::string 
  * :arg: masterLog, Logger object holding the master log to which the messages are to be logged.
  * :return: ReturnCode object denoting the success or failure of the operation.
  */
-int Port::DeepServiceProbe (const std::string &target, Logger masterLog) {
+int Port::NMAPScriptScan (const std::string &target, Logger masterLog) {
 
     std::string command {};
     std::stringstream optional {};
@@ -51,23 +55,24 @@ int Port::DeepServiceProbe (const std::string &target, Logger masterLog) {
         {XML_FILE, xmlDeep},
         {TARGET, target},
     };
-    portLog.Header ();
-    portLog.Log (INFO, MOD_DEEP_SCAN, DEEP_SERVICE_INFO, false);
+    portLog.Header (portid);
+    portLog.Log (INFO, MOD_DEEP_SCAN, NMAP_SCRIPT_INFO, false);
     command = ReplacePlaceHolders (BASE_NMAP_DEEP, placeHolders);
     /* Executing NMAP scan */
     if (ExecuteSystemCommand (command, output) == CMD_EXEC_FAIL) {
-        portLog.Log (FAIL, MOD_DEEP_SCAN, DEEP_SERVICE_NMAP_FAIL, false);
-        masterLog.Log (FAIL, MOD_DEEP_SCAN, DEEP_SERVICE_NMAP_FAIL, true, optional);
-        return DEEP_SERVICE_FAIL;
+        portLog.Log (FAIL, MOD_DEEP_SCAN, NMAP_SCRIPT_EXEC_FAIL, false);
+        masterLog.Log (FAIL, MOD_DEEP_SCAN, NMAP_SCRIPT_EXEC_FAIL, true, optional);
+        scansFailed.push_back ("NMAP vuln");
+        return NMAP_SCRIPT_FAIL;
     }
-    portLog.Log (PASS, MOD_DEEP_SCAN, DEEP_SERVICE_NMAP_PASS, false);
+    portLog.Log (PASS, MOD_DEEP_SCAN, NMAP_SCRIPT_EXEC_PASS, false);
     /* Parsing the XML file */
     if (!document.load_file (xmlDeep.c_str ())) {
-        portLog.Log (FAIL, MOD_DEEP_SCAN, DEEP_SERVICE_XML_FAIL, false);
-        masterLog.Log (FAIL, MOD_DEEP_SCAN, DEEP_SERVICE_XML_FAIL, true, optional);
-        return DEEP_SERVICE_FAIL;
+        portLog.Log (FAIL, MOD_DEEP_SCAN, NMAP_SCRIPT_XML_FAIL, false);
+        masterLog.Log (FAIL, MOD_DEEP_SCAN, NMAP_SCRIPT_XML_FAIL, true, optional);
+        return NMAP_SCRIPT_FAIL;
     }
-    portLog.Log (PASS, MOD_DEEP_SCAN, DEEP_SERVICE_XML_PASS, false);
+    portLog.Log (PASS, MOD_DEEP_SCAN, NMAP_SCRIPT_XML_PASS, false);
     pugi::xml_node nodeHost = document.child ("nmaprun").child ("host");
     pugi::xml_node nodePort = nodeHost.child ("ports").child ("port");
     pugi::xml_node nodeService = nodePort.child ("service");
@@ -83,16 +88,19 @@ int Port::DeepServiceProbe (const std::string &target, Logger masterLog) {
     for (nodeScript = nodePort.child ("script"); nodeScript; nodeScript = nodeScript.next_sibling ("script")) {
         std::string scriptID = nodeScript.attribute ("id").value ();
         std::string scriptOP = nodeScript.child_value ();
+        std::stringstream optional {};
+        optional >> scriptID;
         if (scriptOP.find ("vulerable") != std::string::npos) {
             vulnerabilities.push_back (scriptID);
+            portLog.Log (PASS, MOD_DEEP_SCAN, VULNS_FOUND, false, optional);
         }
     }
-    portLog.Log (PASS, MOD_DEEP_SCAN, DEEP_SERVICE_PASS, false);
-    masterLog.Log (PASS, MOD_DEEP_SCAN, DEEP_SERVICE_PASS, true, optional);
+    portLog.Log (PASS, MOD_DEEP_SCAN, NMAP_SCRIPT_PASS, false);
+    masterLog.Log (PASS, MOD_DEEP_SCAN, NMAP_SCRIPT_PASS, true, optional);
 
-    return DEEP_SERVICE_PASS;
+    return NMAP_SCRIPT_PASS;
 
-} /* End of DeepServiceProbe () */
+} /* End of NMAPScriptScan () */
 
 
 /*
@@ -139,16 +147,14 @@ ReturnCodes Host::GetOpenPorts (Logger objLog) {
         {TARGET, address},
     };
     command = ReplacePlaceHolders (BASE_NMAP_OPEN, placeHolders);
-    /* Execute NMAP scan and return failure if it fails */
+    /* Execute NMAP scan and return failure code, if it fails */
     if (ExecuteSystemCommand (command, output) == CMD_EXEC_FAIL) {
         objLog.Log (FAIL, MOD_NMAP_OPEN, OPEN_NMAP_FAIL, true);
         return OPEN_NMAP_FAIL;
     }
     objLog.Log (PASS, MOD_NMAP_OPEN, OPEN_NMAP_PASS, false);
-    
     /* Parsing NMAP scan results */
     pugi::xml_document document;
-
     if (!document.load_file (xmlOpen.c_str ())) {
         objLog.Log (FAIL, MOD_XML_OPEN, OPEN_XML_FAIL, true);
         return OPEN_XML_FAIL;
@@ -206,7 +212,7 @@ void Host::PrintOpenScanSummary (Logger logObj) {
         std::cout << "\t" << optional.str () << std::endl;
 
         for (const auto &port : openPorts) {
-            std::cout << "\t" << BLU << "[!] " << RST;
+            std::cout << "\t" << BLU << "[+] " << RST;
             std::cout << std::setw (5) << std::right << port.portid << " : " << port.service << std::endl;
         }
     } 
@@ -223,18 +229,18 @@ void Host::PrintOpenScanSummary (Logger logObj) {
  * :arg: maxThreads, integer denoting the number of threads, default value is MAX_THREADS (20).
  * :return: ReturnCodes object denoting the success/failure of the operation.
  */
-int Host::MultitreadedServiceProbe (Logger objFile, int maxThreads) {
+int Host::MultitreadedNMAPScript (Logger objFile, int maxThreads) {
 
     /* module = MOD_MULTI_SCAN */
     std::vector <std::thread> threads;
-    objFile.Log (INFO, MOD_MULTI_SCAN, MULTI_THREAD_PROBE_INFO, true);
+    objFile.Log (INFO, MOD_MULTI_SCAN, MT_NMAP_SCRIPT_INFO, true);
     threads.reserve (std::min (maxThreads, static_cast <int> (openPorts.size ())));
     
     for (Port &port : openPorts) {
         threads.emplace_back ([&]() {
             {
                 std::lock_guard <std::mutex> lock (mtx);
-                port.DeepServiceProbe (this->address, objFile);
+                port.NMAPScriptScan (this->address, objFile);
             }
         });
     }
@@ -244,6 +250,34 @@ int Host::MultitreadedServiceProbe (Logger objFile, int maxThreads) {
             thread.join ();
         }
     }
-    objFile.Log (PASS, MOD_MULTI_SCAN, MULTI_THREAD_PROBE_PASS, true);
-    return MULTI_THREAD_PROBE_PASS;
-} /* End of MultithreadedServiceProbe () */
+    objFile.Log (PASS, MOD_MULTI_SCAN, MT_NMAP_SCRIPT_PASS, true);
+    return MT_NMAP_SCRIPT_PASS;
+} /* End of MultitreadedNMAPScript () */
+
+
+void Host::PrintDeepScanSummary (Logger objFile) {
+
+    /* module = MOD_DEEP_SUM; */
+    if (numOpen > 0) {
+        objFile.Log (INFO, MOD_DEEP_SUM, NMAP_SCRIPT_SUM_INFO, false);
+        std::cout << "\tNMAP Script Scan Summary\n";
+        for (const auto &port : openPorts) {
+            std::cout << "\t\t" << BLU << "[+] " << RST;
+            std::cout << std::setw (5) << std::right << port.portid << " : " << port.service << std::endl;
+            std::cout << "\t\t   ";
+            std::cout << port.product << " " << port.version << std::endl;
+            /* Vuln Scan Summary */
+            if (port.vulnerabilities.size () < 1) {
+                std::cout << "\t\t   No known vulnerabilities found from NMAP script scan.\n";
+            }
+            else {
+                std::cout << "\t\t   Vulnerabilities identified\n\t\t\t";
+                for (size_t index = 0; index < port.vulnerabilities.size (); index++) {
+                    std::cout << port.vulnerabilities [index];
+                    if (index < port.vulnerabilities.size () - 1) { std::cout << ", "; }
+                }
+                std::cout << std::endl;
+            }
+        }
+    }
+} /* End of PrintDeepScanSummary () */

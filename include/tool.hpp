@@ -27,18 +27,21 @@ const std::string MOD_CLEAN = "Clean-up";
 const std::string MOD_NMAP_OPEN = "Open Ports Scanning";
 const std::string MOD_XML_OPEN = "Open Ports XML Parsing";
 const std::string MOD_SUM_PORTS = "Ports Summary";
-const std::string MOD_MULTI_SCAN = "Multi-threaded Deep Services Scan";
-const std::string MOD_DEEP_SCAN = "Deep Service Probe";
+const std::string MOD_MULTI_SCAN = "Multi-threaded NMAP Script Scan";
+const std::string MOD_DEEP_SCAN = "NMAP Script Scan";
+const std::string MOD_DEEP_SUM = "NMAP Script Scan Summary";
 
 /* Return Codes */
 /* Use postive integers for PASS and INFO messages and negative integers for FAIL messages. */
 enum ReturnCodes {
-    DEEP_SERVICE_FAIL = -15,
-    DEEP_SERVICE_XML_FAIL = -14,
-    DEEP_SERVICE_NMAP_FAIL = -13,
-    ANTI_INFO_DEEP_SERVICE = -12,
-    MULTI_THREAD_PROBE_FAIL = -11,
-    ANTI_INFO_MULTI_THREAD = -10,
+    VULNS_NOT_FOUND = -17,
+    ANTI_INFO_NMAP_SCRIPT_SUM = -16,
+    NMAP_SCRIPT_FAIL = -15,
+    NMAP_SCRIPT_XML_FAIL = -14,
+    NMAP_SCRIPT_EXEC_FAIL = -13,
+    ANTI_INFO_NMAP_SCRIPT = -12,
+    MT_NMAP_SCRIPT_FAIL = -11,
+    ANTI_INFO_MT_NMAP_SCRIPT = -10,
     OPEN_FOUND_FAIL = -9,
     FILTER_FOUND_FAIL = -8,
     PORT_FOUND_FAIL = -7,
@@ -57,21 +60,24 @@ enum ReturnCodes {
     PORTS_FOUND_PASS = 7,
     FILTER_FOUND_PASS = 8,
     OPEN_FOUND_PASS = 9,
-    MULTI_THREAD_PROBE_INFO = 10,
-    MULTI_THREAD_PROBE_PASS = 11,
-    DEEP_SERVICE_INFO = 12,
-    DEEP_SERVICE_NMAP_PASS = 13,
-    DEEP_SERVICE_XML_PASS = 14,
-    DEEP_SERVICE_PASS = 15,
+    MT_NMAP_SCRIPT_INFO = 10,
+    MT_NMAP_SCRIPT_PASS = 11,
+    NMAP_SCRIPT_INFO = 12,
+    NMAP_SCRIPT_EXEC_PASS = 13,
+    NMAP_SCRIPT_XML_PASS = 14,
+    NMAP_SCRIPT_PASS = 15,
+    NMAP_SCRIPT_SUM_INFO = 16,
+    VULNS_FOUND = 17,
 };
 
 /* Return Messages */
 /* Make sure to leave a space after the message, to make adding optional messages presentable. */
 static std::map <ReturnCodes, std::string> ReturnMessages = {
-    {DEEP_SERVICE_FAIL, "Probing port for deeper information has failed. "},
-    {DEEP_SERVICE_XML_FAIL, "Parsing the XML file to identify deep information has failed. " },
-    {DEEP_SERVICE_NMAP_FAIL, "Executing NMAP deep probe on port has failed. "},
-    {MULTI_THREAD_PROBE_FAIL, "Running multithreaded probe against open ports has failed. "},
+    {VULNS_NOT_FOUND, "No known vulnerabilities found, as per NMAP vulnerability scan. "},
+    {NMAP_SCRIPT_FAIL, "Probing port for deeper information has failed. "},
+    {NMAP_SCRIPT_XML_FAIL, "Parsing the XML file to identify deep information has failed. " },
+    {NMAP_SCRIPT_EXEC_FAIL, "Executing NMAP script scan on port has failed. "},
+    {MT_NMAP_SCRIPT_FAIL, "Running multithreaded NMAP script scan against open ports has failed. "},
     {OPEN_FOUND_FAIL, "No open port identied on the target. "},
     {FILTER_FOUND_FAIL, "No filtered port identified on the target. "},
     {PORT_FOUND_FAIL, "No port identified on the target. "},
@@ -89,12 +95,14 @@ static std::map <ReturnCodes, std::string> ReturnMessages = {
     {PORTS_FOUND_PASS, "Port(s) identified on the target. "},
     {FILTER_FOUND_PASS, "Filtered port(s) identified on the target. "},
     {OPEN_FOUND_PASS, "Open port(s) identified on the target. "},
-    {MULTI_THREAD_PROBE_INFO, "Initiated multi-threaded service probe on all identified open port(s). "},
-    {MULTI_THREAD_PROBE_PASS, "Running multithreaded probe against open ports has been completed. "},
-    {DEEP_SERVICE_INFO, "Initiated deep service NMAP probe in the target. "},
-    {DEEP_SERVICE_NMAP_PASS, "NMAP deep service probe on target has been completed. "},
-    {DEEP_SERVICE_XML_PASS, "Deep probe xml file has been parsed successfully. "},
-    {DEEP_SERVICE_PASS, "Porbing port for deeper information has been completed successfully. "},
+    {MT_NMAP_SCRIPT_INFO, "Initiated multi-threaded NMAP script scan on all identified open port(s). "},
+    {MT_NMAP_SCRIPT_PASS, "Running multithreaded NMAP script scan against open ports has been completed. "},
+    {NMAP_SCRIPT_INFO, "Initiated NMAP script scan against the target. "},
+    {NMAP_SCRIPT_EXEC_PASS, "NMAP script scan on target has been completed. "},
+    {NMAP_SCRIPT_XML_PASS, "NMAP script scan xml file has been parsed successfully. "},
+    {NMAP_SCRIPT_PASS, "NMAP script scan has been completed successfully. "},
+    {NMAP_SCRIPT_SUM_INFO, "NMAP Script Scan Summary. "},
+    {VULNS_FOUND, "Possible known vulnerability found on the port. "},
 };
 
 #endif

@@ -40,7 +40,7 @@ class Port {
 
         /* Member functions */
         Port (const std::string &id, const std::string &status, const std::string &name = "N/A");
-        int DeepServiceProbe (const std::string &address, Logger masterLog);
+        int NMAPScriptScan (const std::string &address, Logger masterLog);
 
 }; /* End of class Port */
 
@@ -58,7 +58,8 @@ class Host {
         void AddPortToHost (const Port &port);
         ReturnCodes GetOpenPorts (Logger objLog);
         void PrintOpenScanSummary (Logger objLog);
-        int MultitreadedServiceProbe (Logger objLog, int maxThreads = MAX_THREADS);
+        int MultitreadedNMAPScript (Logger objLog, int maxThreads = MAX_THREADS);
+        void PrintDeepScanSummary (Logger objLog);
 
 }; /* End of class Host */
 
